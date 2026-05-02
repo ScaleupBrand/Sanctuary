@@ -1,36 +1,43 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Volver A Ti
 
-## Getting Started
+Una aplicación diseñada para el acompañamiento y regulación emocional, enfocada en el bienestar personal.
 
-First, run the development server:
+## Características Principales
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+- **Onboarding Personalizado**: Flujo de bienvenida para configurar el perfil del usuario (nombre, avatar y horarios).
+- **Registro de Estado de Ánimo**: Sistema de check-in diario para monitorear la energía y el estado emocional.
+- **Panel de Control (Dashboard)**: Visualización de tendencias semanales y acceso rápido a herramientas de regulación.
+- **Gestión de Crisis (Botón de Brote)**: Acceso inmediato a recursos de calma durante momentos difíciles.
+- **Historial y Seguimiento**: Registro detallado de la evolución emocional del usuario.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Tecnologías Utilizadas
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- **Frontend**: Next.js 15 (App Router), React, Tailwind CSS, Lucide React.
+- **Backend/Base de Datos**: Supabase (PostgreSQL, Auth, RLS).
+- **Estilo**: Shadcn UI para componentes consistentes y accesibles.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Configuración del Proyecto
 
-## Learn More
+1. **Instalar dependencias**:
+   ```bash
+   npm install
+   ```
 
-To learn more about Next.js, take a look at the following resources:
+2. **Variables de Entorno**:
+   Crea un archivo `.env.local` con las siguientes claves:
+   ```env
+   NEXT_PUBLIC_SUPABASE_URL=tu_url_de_supabase
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=tu_anon_key
+   ```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+3. **Ejecutar en Desarrollo**:
+   ```bash
+   npm run dev
+   ```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+4. **Base de Datos**:
+   Las migraciones se encuentran en la carpeta `supabase/migrations`. Puedes aplicarlas usando el CLI de Supabase o directamente en el SQL Editor de tu proyecto.
 
-## Deploy on Vercel
+## Despliegue
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Recomendado usar [Vercel](https://vercel.com) para un despliegue optimizado con Next.js.

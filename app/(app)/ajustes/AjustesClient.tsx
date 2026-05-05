@@ -84,6 +84,9 @@ export default function AjustesClient({ initialData }: { initialData: AjustesDat
 
   const supportEmail = process.env.NEXT_PUBLIC_SUPPORT_EMAIL || ''
   const supportWhatsapp = process.env.NEXT_PUBLIC_SUPPORT_WHATSAPP?.replace(/\D/g, '') || ''
+  const supportWhatsappMessage = encodeURIComponent(
+    'Hola Almudena, necesito ayuda con Sanctuary.'
+  )
 
   return (
     <div className="bg-background text-on-background font-body-md min-h-screen pt-20 md:pt-8 pb-16 antialiased">
@@ -228,7 +231,7 @@ export default function AjustesClient({ initialData }: { initialData: AjustesDat
                   </a>
                 )}
                 {supportWhatsapp && (
-                  <a href={`https://wa.me/${supportWhatsapp}`} target="_blank" rel="noreferrer" className="flex-1 bg-primary-container rounded-lg py-3 px-4 font-button-text text-button-text text-on-primary flex items-center justify-center gap-2 hover:bg-primary-container/90 transition-colors duration-300">
+                  <a href={`https://wa.me/${supportWhatsapp}?text=${supportWhatsappMessage}`} target="_blank" rel="noreferrer" className="flex-1 bg-primary-container rounded-lg py-3 px-4 font-button-text text-button-text text-on-primary flex items-center justify-center gap-2 hover:bg-primary-container/90 transition-colors duration-300">
                     <span className="material-symbols-outlined text-[20px]">chat</span>
                     WhatsApp
                   </a>

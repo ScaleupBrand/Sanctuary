@@ -1,23 +1,27 @@
 import type { Metadata } from 'next'
-import { Manrope, Noto_Serif } from 'next/font/google'
+import { Toaster } from 'sonner'
 import './globals.css'
 
-const manrope = Manrope({
-  subsets: ['latin'],
-  variable: '--font-manrope',
-  display: 'swap',
-})
-
-const notoSerif = Noto_Serif({
-  subsets: ['latin'],
-  variable: '--font-noto-serif',
-  weight: ['400', '700'],
-  display: 'swap',
-})
-
 export const metadata: Metadata = {
-  title: 'Volver a Ti',
-  description: 'App de acompañamiento terapéutico',
+  metadataBase: process.env.NEXT_PUBLIC_SITE_URL
+    ? new URL(process.env.NEXT_PUBLIC_SITE_URL)
+    : undefined,
+  title: {
+    default: 'Sanctuary',
+    template: '%s · Sanctuary',
+  },
+  description: 'App de acompañamiento terapéutico para fibromialgia y dolor crónico.',
+  applicationName: 'Sanctuary',
+  icons: {
+    icon: '/icon.svg',
+  },
+  openGraph: {
+    title: 'Sanctuary',
+    description: 'Acompañamiento terapéutico cálido entre sesiones.',
+    siteName: 'Sanctuary',
+    locale: 'es_ES',
+    type: 'website',
+  },
 }
 
 export default function RootLayout({
@@ -27,16 +31,23 @@ export default function RootLayout({
 }) {
   return (
     <html lang="es" className="light">
-      <head>
-        <link
-          href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
-          rel="stylesheet"
-        />
-      </head>
       <body
-        className={`${manrope.variable} ${notoSerif.variable} bg-background text-on-background font-sans antialiased pb-24 md:pb-0`}
+        className="bg-background text-on-background font-sans antialiased pb-24 md:pb-0"
       >
         {children}
+        <Toaster
+          position="top-center"
+          richColors={false}
+          toastOptions={{
+            classNames: {
+              toast: 'border-[#dac0c3] bg-[#fff8f7] text-[#22191a] shadow-[0_12px_32px_rgba(142,53,74,0.12)]',
+              title: 'text-[15px] font-medium leading-[22px]',
+              description: 'text-[#544245]',
+              success: 'border-[#dac0c3] bg-[#fff8f7] text-[#22191a]',
+              error: 'border-[#f0a39d] bg-[#fff0f1] text-[#701e34]',
+            },
+          }}
+        />
       </body>
     </html>
   )

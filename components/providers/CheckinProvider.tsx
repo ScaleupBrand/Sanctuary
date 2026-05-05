@@ -1,6 +1,6 @@
 'use client'
 
-import React, { createContext, useContext, useState, useEffect, useRef } from 'react'
+import React, { createContext, useContext, useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { NavigationModal } from '@/components/ui/NavigationModal'
 import { skipCheckin } from '@/lib/actions/checkin-status'
@@ -17,11 +17,20 @@ export interface CheckinData {
 }
 
 export interface WeeklyDay {
-  day: string
   fecha: string
-  energia: number
-  omitido: boolean
+  dayLabel: string
+  dateLabel: string
+  energia: number | null
+  dolor: number | null
+  huboBrote: boolean
   registered: boolean
+}
+
+export interface UpcomingSession {
+  id: string
+  fecha_hora: string
+  notas_previas?: string | null
+  estado?: string | null
 }
 
 interface CheckinContextType {
@@ -29,9 +38,12 @@ interface CheckinContextType {
   clinicalDate: string | null
   todayCheckin: CheckinData | null
   weeklyHistory: WeeklyDay[]
+  userName: string | null
+  upcomingSession: UpcomingSession | null
   requestNavigation: (href: string) => void
   setPending: (val: boolean) => void
   setTodayCheckin: (data: CheckinData | null) => void
+  setWeeklyHistory: (data: WeeklyDay[] | ((current: WeeklyDay[]) => WeeklyDay[])) => void
 }
 
 interface CheckinProviderProps {
@@ -40,17 +52,19 @@ interface CheckinProviderProps {
   initialClinicalDate: string | null
   initialTodayCheckin: CheckinData | null
   initialWeeklyHistory: WeeklyDay[]
+  initialUserName: string | null
+  initialUpcomingSession: UpcomingSession | null
 }
 
 const CheckinContext = createContext<CheckinContextType | undefined>(undefined)
 
-export function CheckinProvider({ children, initialIsPending, initialClinicalDate, initialTodayCheckin, initialWeeklyHistory }: CheckinProviderProps) {
+export function CheckinProvider({ children, initialIsPending, initialClinicalDate, initialTodayCheckin, initialWeeklyHistory, initialUserName, initialUpcomingSession }: CheckinProviderProps) {
   const router = useRouter()
 
   const [isPending, setIsPending] = useState<boolean>(initialIsPending)
   const [clinicalDate] = useState<string | null>(initialClinicalDate)
   const [todayCheckin, setTodayCheckin] = useState<CheckinData | null>(initialTodayCheckin)
-  const [weeklyHistory] = useState<WeeklyDay[]>(initialWeeklyHistory)
+  const [weeklyHistory, setWeeklyHistory] = useState<WeeklyDay[]>(initialWeeklyHistory)
 
   const [modalOpen, setModalOpen] = useState(false)
   const [targetHref, setTargetHref] = useState<string | null>(null)
@@ -58,7 +72,15 @@ export function CheckinProvider({ children, initialIsPending, initialClinicalDat
 
   // Sync if server re-renders with new value
   useEffect(() => {
-    setIsPending(initialIsPending)
+    let cancelled = false
+
+    queueMicrotask(() => {
+      if (!cancelled) setIsPending(initialIsPending)
+    })
+
+    return () => {
+      cancelled = true
+    }
   }, [initialIsPending])
 
   const requestNavigation = (href: string) => {
@@ -78,7 +100,7 @@ export function CheckinProvider({ children, initialIsPending, initialClinicalDat
       return
     }
     setIsSkipping(true)
-    const res = await skipCheckin(clinicalDate)
+    const res = await skipCheckin()
     if (res.success || res.error) {
       setIsPending(false)
       setModalOpen(false)
@@ -90,7 +112,9 @@ export function CheckinProvider({ children, initialIsPending, initialClinicalDat
   return (
     <CheckinContext.Provider value={{
       isPending, clinicalDate, todayCheckin, weeklyHistory,
-      requestNavigation, setPending: setIsPending, setTodayCheckin,
+      userName: initialUserName,
+      upcomingSession: initialUpcomingSession,
+      requestNavigation, setPending: setIsPending, setTodayCheckin, setWeeklyHistory,
     }}>
       {children}
       <NavigationModal

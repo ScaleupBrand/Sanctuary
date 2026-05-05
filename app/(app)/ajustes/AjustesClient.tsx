@@ -5,9 +5,17 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
+import { toast } from 'sonner'
 import { updateNombre, updateHoraCheckin, updateNotificaciones, updateAvatar } from '@/lib/actions/ajustes'
 
-export default function AjustesClient({ initialData }: { initialData: any }) {
+type AjustesData = {
+  nombre: string
+  horaCheckin: string
+  notificacionesActivas: boolean
+  avatarUrl: string | null
+}
+
+export default function AjustesClient({ initialData }: { initialData: AjustesData }) {
   const [nombre, setNombre] = useState(initialData.nombre || '')
   const [horaCheckin, setHoraCheckin] = useState(initialData.horaCheckin || '20:00')
   const [notificaciones, setNotificaciones] = useState(initialData.notificacionesActivas)
@@ -35,31 +43,47 @@ export default function AjustesClient({ initialData }: { initialData: any }) {
     
     if (res.success && res.avatarUrl) {
       setAvatarUrl(res.avatarUrl)
+      toast.success('Cambios guardados')
     } else {
-      alert('Error subiendo el avatar: ' + res.error)
+      toast.error('Algo salió mal. Intentá de nuevo.')
     }
   }
 
   const handleNombreBlur = async () => {
     if (nombre !== initialData.nombre) {
-      await updateNombre(nombre)
+      const res = await updateNombre(nombre)
+      if (res.success) {
+        toast.success('Cambios guardados')
+      } else {
+        toast.error('Algo salió mal. Intentá de nuevo.')
+      }
     }
   }
 
   const handleHoraChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const newHora = e.target.value
     setHoraCheckin(newHora)
-    await updateHoraCheckin(newHora)
+    const res = await updateHoraCheckin(newHora)
+    if (res.success) {
+      toast.success('Cambios guardados')
+    } else {
+      toast.error('Algo salió mal. Intentá de nuevo.')
+    }
   }
 
   const handleNotificacionesChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const checked = e.target.checked
     setNotificaciones(checked)
-    await updateNotificaciones(checked)
+    const res = await updateNotificaciones(checked)
+    if (res.success) {
+      toast.success('Cambios guardados')
+    } else {
+      toast.error('Algo salió mal. Intentá de nuevo.')
+    }
   }
 
-  const supportEmail = process.env.NEXT_PUBLIC_SUPPORT_EMAIL || 'soporte@volverati.com'
-  const supportWhatsapp = process.env.NEXT_PUBLIC_SUPPORT_WHATSAPP || '1234567890'
+  const supportEmail = process.env.NEXT_PUBLIC_SUPPORT_EMAIL || ''
+  const supportWhatsapp = process.env.NEXT_PUBLIC_SUPPORT_WHATSAPP?.replace(/\D/g, '') || ''
 
   return (
     <div className="bg-background text-on-background font-body-md min-h-screen pt-20 md:pt-8 pb-16 antialiased">
@@ -83,7 +107,7 @@ export default function AjustesClient({ initialData }: { initialData: any }) {
             className="w-24 h-24 rounded-full overflow-hidden mb-stack-lg relative group border-[0.5px] border-outline-variant shadow-[0_12px_24px_-4px_rgba(142,53,74,0.05)]"
           >
             {avatarUrl ? (
-              <Image src={avatarUrl} alt="User Profile" layout="fill" objectFit="cover" />
+              <Image src={avatarUrl} alt="Foto de perfil" layout="fill" objectFit="cover" />
             ) : (
               <div className="w-full h-full bg-surface-variant flex items-center justify-center">
                 <span className="material-symbols-outlined text-[56px] text-outline">person</span>
@@ -191,20 +215,30 @@ export default function AjustesClient({ initialData }: { initialData: any }) {
                   </span>
                 </summary>
                 <p className="text-on-surface-variant font-body-md text-body-md mt-unit text-left animate-fade-in">
-                  Presiona el botón del rayo "Brote" en el menú de inicio para iniciar el protocolo de emergencia de inmediato y avisarle a tu terapeuta.
+                  Presiona el botón del rayo &quot;Brote&quot; en el menú de inicio para iniciar el protocolo de emergencia de inmediato y avisarle a tu terapeuta.
                 </p>
               </details>
             </div>
-            <div className="flex flex-col sm:flex-row gap-4 mt-stack-md">
-              <a href={`mailto:${supportEmail}`} className="flex-1 border-[0.5px] border-outline-variant rounded-lg py-3 px-4 font-button-text text-button-text text-primary-container flex items-center justify-center gap-2 hover:bg-primary-container/5 transition-colors duration-300">
-                <span className="material-symbols-outlined text-[20px]">mail</span>
-                Enviar Email
-              </a>
-              <a href={`https://wa.me/${supportWhatsapp}`} target="_blank" rel="noreferrer" className="flex-1 bg-primary-container rounded-lg py-3 px-4 font-button-text text-button-text text-on-primary flex items-center justify-center gap-2 hover:bg-primary-container/90 transition-colors duration-300">
-                <span className="material-symbols-outlined text-[20px]">chat</span>
-                WhatsApp
-              </a>
-            </div>
+            {(supportEmail || supportWhatsapp) ? (
+              <div className="flex flex-col sm:flex-row gap-4 mt-stack-md">
+                {supportEmail && (
+                  <a href={`mailto:${supportEmail}`} className="flex-1 border-[0.5px] border-outline-variant rounded-lg py-3 px-4 font-button-text text-button-text text-primary-container flex items-center justify-center gap-2 hover:bg-primary-container/5 transition-colors duration-300">
+                    <span className="material-symbols-outlined text-[20px]">mail</span>
+                    Enviar email
+                  </a>
+                )}
+                {supportWhatsapp && (
+                  <a href={`https://wa.me/${supportWhatsapp}`} target="_blank" rel="noreferrer" className="flex-1 bg-primary-container rounded-lg py-3 px-4 font-button-text text-button-text text-on-primary flex items-center justify-center gap-2 hover:bg-primary-container/90 transition-colors duration-300">
+                    <span className="material-symbols-outlined text-[20px]">chat</span>
+                    WhatsApp
+                  </a>
+                )}
+              </div>
+            ) : (
+              <p className="mt-stack-md rounded-lg bg-surface-container-low px-4 py-3 text-sm leading-6 text-on-surface-variant">
+                Tu terapeuta te indicará el canal de soporte disponible.
+              </p>
+            )}
           </section>
         </div>
 

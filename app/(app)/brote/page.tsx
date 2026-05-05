@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { toast } from 'sonner'
 import { saveBrote } from '@/lib/actions/brotes'
 
 export default function BrotePage() {
@@ -43,8 +44,9 @@ export default function BrotePage() {
     })
 
     if (result?.error) {
-      alert(result.error)
+      toast.error('Algo salió mal. Intentá de nuevo.')
     } else {
+      toast.success('Registro guardado. Estamos contigo.')
       router.push('/inicio')
     }
     setSaving(false)
@@ -55,7 +57,7 @@ export default function BrotePage() {
       {/* Mobile Top Header */}
       <header className="md:hidden flex justify-between items-center px-container-padding-mobile py-6">
         <h1 className="font-serif text-xl italic text-[#8E354A] dark:text-rose-300 font-extrabold tracking-tight">
-          Volver a Ti
+          Sanctuary
         </h1>
         <button
           onClick={() => router.push('/inicio')}

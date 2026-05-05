@@ -1,4 +1,6 @@
-import { getRecentThreads } from '@/lib/actions/historial'
+import { WeeklyHistoryChart } from '@/components/historial/WeeklyHistoryChart'
+import { getInsights } from '@/lib/actions/insights'
+import { getRecentThreads, getWeeklyChartData } from '@/lib/actions/historial'
 
 // Helper for formatting date
 function formatThreadDate(dateString: string) {
@@ -13,7 +15,11 @@ function formatThreadDate(dateString: string) {
 }
 
 export default async function HistorialPage() {
-  const threads = await getRecentThreads()
+  const [threads, weeklyChartData, insights] = await Promise.all([
+    getRecentThreads(),
+    getWeeklyChartData(),
+    getInsights(),
+  ])
 
   // Helper colors for the timeline dots
   const hoverColorClasses = [
@@ -30,29 +36,15 @@ export default async function HistorialPage() {
         <p className="text-[16px] leading-[24px] text-on-surface-variant">Observando el ritmo de tu paisaje interior.</p>
       </section>
 
-      {/* Abstract Data Visualization */}
+      {/* Weekly Data Visualization */}
       <section className="mb-section-gap">
-        <div className="relative w-full h-[320px] rounded-xl border-[0.5px] border-outline-variant bg-surface-container-low overflow-hidden flex flex-col justify-end p-6 group transition-all duration-700 hover:shadow-[0_12px_32px_rgba(142,53,74,0.04)]">
-          {/* Blurred Organic Gradients */}
-          <div className="absolute inset-0 opacity-80 mix-blend-multiply transition-transform duration-1000 group-hover:scale-105">
-            <div className="absolute top-[20%] left-[10%] w-[40%] h-[60%] rounded-[100%] bg-primary-fixed-dim blur-[60px] opacity-60"></div>
-            <div className="absolute bottom-[10%] right-[20%] w-[50%] h-[50%] rounded-[100%] bg-tertiary-fixed-dim blur-[80px] opacity-50"></div>
-            <div className="absolute top-[40%] right-[10%] w-[30%] h-[40%] rounded-[100%] bg-secondary-fixed-dim blur-[50px] opacity-40"></div>
-          </div>
-          {/* Internal Micro-Structure */}
-          <div className="absolute inset-0 border-[0.5px] border-outline-variant/10 rounded-xl m-2 pointer-events-none"></div>
-          {/* Precise X-Axis Labels */}
-          <div className="relative z-10 w-full flex justify-between border-t-[0.5px] border-outline-variant/30 pt-4 text-[12px] font-semibold tracking-[0.1em] uppercase text-on-surface-variant">
-            <span>02 May</span>
-            <span>09 May</span>
-            <span>16 May</span>
-            <span>23 May</span>
-          </div>
-        </div>
+        <WeeklyHistoryChart data={weeklyChartData} />
         {/* Narrative Insights */}
         <div className="mt-stack-lg pl-4 border-l-[0.5px] border-outline-variant">
           <p className="text-[18px] leading-[28px] text-on-background max-w-2xl">
-            Has cultivado un espacio de calma notable durante el último ciclo. La tensión matutina que notaste antes se ha disipado suavemente, dando paso a una energía más suave y sostenida durante tus tardes. Continúa honrando este ritmo natural.
+            {insights.length > 0
+              ? insights.join(' ')
+              : 'Todavía no hay suficientes registros para observar patrones con calma.'}
           </p>
         </div>
       </section>

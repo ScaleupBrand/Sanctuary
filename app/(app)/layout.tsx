@@ -1,17 +1,22 @@
 import React from 'react'
 import { CheckinProvider } from '@/components/providers/CheckinProvider'
-import { MobileNav, DesktopNav } from '@/components/ui/MobileNav'
-import { getCheckinStatus, getWeeklyHistory } from '@/lib/actions/checkin-status'
+import { PageTransition } from '@/components/providers/PageTransition'
+import { MobileNav } from '@/components/ui/MobileNav'
+import { getCheckinStatus } from '@/lib/actions/checkin-status'
 import { getUserProfile } from '@/lib/actions/auth'
+import { getWeeklyChartData } from '@/lib/actions/historial'
+import { getUpcomingClientSession } from '@/lib/actions/agenda'
 import { TopAppBar } from '@/components/ui/TopAppBar'
 import { DesktopSidebar } from '@/components/ui/DesktopSidebar'
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const status = await getCheckinStatus()
-  const weeklyHistory = await getWeeklyHistory()
+  const weeklyHistory = await getWeeklyChartData()
   const userProfile = await getUserProfile()
+  const upcomingSession = await getUpcomingClientSession()
+  const supportWhatsapp = process.env.NEXT_PUBLIC_SUPPORT_WHATSAPP?.replace(/\D/g, '')
 
-  const isPendingApproval = userProfile?.estado === 'pendiente'
+  const isPendingApproval = userProfile?.estado !== 'activo'
 
   return (
     <CheckinProvider
@@ -19,6 +24,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       initialClinicalDate={status.clinicalDate || null}
       initialTodayCheckin={status.todayCheckin}
       initialWeeklyHistory={weeklyHistory}
+      initialUserName={userProfile?.nombre ?? null}
+      initialUpcomingSession={upcomingSession}
     >
       <div className="min-h-screen flex flex-col md:flex-row relative">
         {/* Global TopAppBar (Mobile Only) */}
@@ -29,7 +36,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
         {/* Main Content Area */}
         <div className={`flex-1 md:pl-[280px] pt-[73px] md:pt-0 ${isPendingApproval ? 'blur-md opacity-30 select-none pointer-events-none' : ''}`}>
-          {children}
+          <PageTransition>{children}</PageTransition>
         </div>
 
         {/* Lock Overlay */}
@@ -45,15 +52,21 @@ export default async function AppLayout({ children }: { children: React.ReactNod
               <p className="text-[16px] leading-[24px] text-on-surface-variant mb-8">
                 Tu cuenta ha sido creada exitosamente. Almudena está revisando tu acceso para asegurarse de que todo esté listo para acompañarte en tu proceso.
               </p>
-              <a 
-                href="https://wa.me/1234567890?text=Hola%20Almudena,%20ya%20creé%20mi%20cuenta%20en%20Volver%20A%20Ti.%20¿Podrías%20darme%20acceso?" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="w-full bg-[#25D366] text-white text-[15px] font-medium py-4 rounded-full flex items-center justify-center gap-2 hover:bg-[#20b858] transition-colors shadow-sm pointer-events-auto"
-              >
-                <span className="material-symbols-outlined text-[20px]">chat</span>
-                Contactar por WhatsApp
-              </a>
+              {supportWhatsapp ? (
+                <a
+                  href={`https://wa.me/${supportWhatsapp}?text=Hola%20Almudena,%20ya%20creé%20mi%20cuenta%20en%20Sanctuary.%20¿Podrías%20darme%20acceso?`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full bg-primary text-on-primary text-[15px] font-medium py-4 rounded-full flex items-center justify-center gap-2 hover:bg-surface-tint transition-colors shadow-sm pointer-events-auto"
+                >
+                  <span className="material-symbols-outlined text-[20px]">chat</span>
+                  Contactar por WhatsApp
+                </a>
+              ) : (
+                <p className="rounded-xl bg-surface-container-low px-4 py-3 text-sm leading-6 text-on-surface-variant">
+                  Tu acceso está pendiente. Almudena te avisará cuando esté listo.
+                </p>
+              )}
             </div>
           </div>
         )}

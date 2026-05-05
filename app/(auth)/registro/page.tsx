@@ -2,7 +2,20 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { signup } from '@/lib/actions/auth'
 
-export default function RegistroPage() {
+const signupErrors: Record<string, string> = {
+  'missing-fields': 'Completá todos los campos para crear tu cuenta.',
+  'signup-failed': 'No pudimos crear tu cuenta. Intentá de nuevo.',
+  'profile-failed': 'Tu cuenta se creó, pero faltó preparar tu perfil.',
+}
+
+export default async function RegistroPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string }>
+}) {
+  const params = await searchParams
+  const errorMessage = params.error ? signupErrors[params.error] : null
+
   return (
     <main className="min-h-screen flex flex-col md:flex-row w-full bg-background text-on-background selection:bg-primary-fixed selection:text-on-primary-fixed">
       {/* Left: Atmospheric Image (Desktop Only) */}
@@ -24,7 +37,7 @@ export default function RegistroPage() {
           {/* Header Group */}
           <div className="flex flex-col mb-section-gap text-left">
             <span className="text-[12px] font-semibold tracking-[0.1em] text-outline uppercase mb-stack-sm block">
-              Volver a Ti
+              Sanctuary
             </span>
             <h1 className="font-serif text-[32px] leading-[40px] tracking-[-0.01em] text-on-surface mb-stack-sm">
               Crea tu cuenta
@@ -36,6 +49,12 @@ export default function RegistroPage() {
           
           {/* Form */}
           <form action={signup} className="flex flex-col gap-stack-lg w-full">
+            {errorMessage && (
+              <p className="rounded-lg border-[0.5px] border-outline-variant bg-surface-container-low px-4 py-3 text-[15px] leading-[22px] text-primary">
+                {errorMessage}
+              </p>
+            )}
+
             {/* Input: Full Name */}
             <div className="flex flex-col gap-stack-sm group">
               <label className="text-[12px] font-semibold tracking-[0.1em] uppercase text-on-surface-variant group-focus-within:text-primary transition-colors" htmlFor="fullName">

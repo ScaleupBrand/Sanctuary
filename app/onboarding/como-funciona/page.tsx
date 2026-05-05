@@ -10,10 +10,10 @@ export default function ComoFuncionaPage() {
           arrow_back
         </Link>
         <span className="text-xl font-serif italic text-[#8E354A] dark:text-rose-300">
-          2 of 4
+          2 de 4
         </span>
         <Link href="/onboarding/tu-nombre" className="font-serif text-[#8E354A] dark:text-rose-300 font-medium hover:opacity-70 transition-opacity duration-300 active:scale-95">
-          Skip
+          Saltar
         </Link>
       </header>
 

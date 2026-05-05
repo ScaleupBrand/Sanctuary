@@ -18,6 +18,58 @@ export type HistoryThread = {
   colorClass: string
 }
 
+export type WeeklyChartPoint = {
+  fecha: string
+  dayLabel: string
+  dateLabel: string
+  energia: number | null
+  dolor: number | null
+  huboBrote: boolean
+  registered: boolean
+}
+
+function formatDateKey(date: Date) {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+export async function getWeeklyChartData(): Promise<WeeklyChartPoint[]> {
+  const supabase = await createClient()
+  const userId = await getUserId()
+
+  const today = new Date()
+  const dates = Array.from({ length: 7 }, (_, index) => {
+    const date = new Date(today)
+    date.setDate(today.getDate() - (6 - index))
+    return formatDateKey(date)
+  })
+
+  const { data: checkins } = await supabase
+    .from('checkins')
+    .select('fecha, energia, dolor, hubo_brote, omitido')
+    .eq('usuario_id', userId)
+    .in('fecha', dates)
+    .order('fecha', { ascending: true })
+
+  return dates.map((fecha) => {
+    const date = new Date(`${fecha}T12:00:00`)
+    const checkin = checkins?.find((item) => item.fecha === fecha)
+    const registered = Boolean(checkin && !checkin.omitido)
+
+    return {
+      fecha,
+      dayLabel: date.toLocaleDateString('es-ES', { weekday: 'short' }),
+      dateLabel: date.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' }),
+      energia: registered ? checkin?.energia ?? null : null,
+      dolor: registered ? checkin?.dolor ?? null : null,
+      huboBrote: registered ? checkin?.hubo_brote ?? false : false,
+      registered,
+    }
+  })
+}
+
 export async function getRecentThreads(): Promise<HistoryThread[]> {
   const supabase = await createClient()
   const userId = await getUserId()
@@ -44,12 +96,10 @@ export async function getRecentThreads(): Promise<HistoryThread[]> {
   if (checkins) {
     checkins.forEach((c) => {
       if (c.nota_libre && c.nota_libre.trim() !== '') {
-        // Determine title and color based on energy or just generic
-        const isGood = c.energia && c.energia >= 4
         threads.push({
           id: `checkin-${c.id}`,
           type: 'checkin',
-          title: isGood ? 'Quiet Clarity' : 'Daily Check-in',
+          title: 'Registro diario',
           date: c.created_at,
           content: c.nota_libre,
           colorClass: 'bg-primary-container border-primary-container',
@@ -64,7 +114,7 @@ export async function getRecentThreads(): Promise<HistoryThread[]> {
       threads.push({
         id: `brote-${b.id}`,
         type: 'brote',
-        title: 'Physical Release',
+        title: 'Brote registrado',
         date: b.created_at,
         content: content,
         colorClass: 'bg-tertiary-container border-tertiary-container',

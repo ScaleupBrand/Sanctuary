@@ -1,4 +1,4 @@
-# Volver A Ti
+# Sanctuary
 
 Una aplicación diseñada para el acompañamiento y regulación emocional, enfocada en el bienestar personal.
 
@@ -12,7 +12,7 @@ Una aplicación diseñada para el acompañamiento y regulación emocional, enfoc
 
 ## Tecnologías Utilizadas
 
-- **Frontend**: Next.js 15 (App Router), React, Tailwind CSS, Lucide React.
+- **Frontend**: Next.js 16 (App Router), React, Tailwind CSS, Lucide React.
 - **Backend/Base de Datos**: Supabase (PostgreSQL, Auth, RLS).
 - **Estilo**: Shadcn UI para componentes consistentes y accesibles.
 
@@ -24,10 +24,11 @@ Una aplicación diseñada para el acompañamiento y regulación emocional, enfoc
    ```
 
 2. **Variables de Entorno**:
-   Crea un archivo `.env.local` con las siguientes claves:
+   Copia `.env.example` a `.env.local` y completa las claves:
    ```env
    NEXT_PUBLIC_SUPABASE_URL=tu_url_de_supabase
    NEXT_PUBLIC_SUPABASE_ANON_KEY=tu_anon_key
+   SUPABASE_SERVICE_ROLE_KEY=tu_service_role_key
    ```
 
 3. **Ejecutar en Desarrollo**:
@@ -41,3 +42,11 @@ Una aplicación diseñada para el acompañamiento y regulación emocional, enfoc
 ## Despliegue
 
 Recomendado usar [Vercel](https://vercel.com) para un despliegue optimizado con Next.js.
+
+Antes de deployar, corré:
+
+```bash
+npm run predeploy
+```
+
+Y revisá [docs/predeploy-checklist.md](docs/predeploy-checklist.md).

@@ -2,6 +2,13 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { saveClientSessionPrep } from '@/lib/actions/session-prep'
+
+type WeeklyCheckinRow = {
+  fecha: string
+  energia: number | null
+  omitido: boolean | null
+}
 
 async function getUserId() {
   const supabase = await createClient()
@@ -46,7 +53,9 @@ export async function getCheckinStatus() {
     .select('*')
     .eq('usuario_id', userId)
     .eq('fecha', clinicalDate)
-    .single()
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
 
   return {
     isPending: !existingCheckin,
@@ -83,7 +92,7 @@ export async function getWeeklyHistory() {
   return days.map((fecha) => {
     const d = new Date(fecha + 'T12:00:00')
     const dayLabel = dayLabels[d.getDay()]
-    const checkin = checkins?.find((c: any) => c.fecha === fecha)
+    const checkin = (checkins as WeeklyCheckinRow[] | null)?.find((c) => c.fecha === fecha)
     return {
       day: dayLabel,
       fecha,
@@ -95,15 +104,31 @@ export async function getWeeklyHistory() {
 }
 
 // ─── Skip check-in ──────────────────────────────────────────────────────────
-export async function skipCheckin(clinicalDate: string) {
+export async function skipCheckin() {
   const supabase = await createClient()
   const userId = await getUserId()
+  const clinicalDate = await getClinicalDate()
 
-  const { error } = await supabase.from('checkins').insert({
-    usuario_id: userId,
-    fecha: clinicalDate,
-    omitido: true,
-  })
+  const { data: existing } = await supabase
+    .from('checkins')
+    .select('id')
+    .eq('usuario_id', userId)
+    .eq('fecha', clinicalDate)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  const { error } = existing
+    ? await supabase
+        .from('checkins')
+        .update({ omitido: true })
+        .eq('usuario_id', userId)
+        .eq('fecha', clinicalDate)
+    : await supabase.from('checkins').insert({
+        usuario_id: userId,
+        fecha: clinicalDate,
+        omitido: true,
+      })
 
   if (error) {
     console.error('Error skipping checkin:', error)
@@ -127,14 +152,6 @@ export async function saveCheckin(formData: {
   const userId = await getUserId()
   const clinicalDate = await getClinicalDate()
 
-  // Check if one exists already for today
-  const { data: existing } = await supabase
-    .from('checkins')
-    .select('id')
-    .eq('usuario_id', userId)
-    .eq('fecha', clinicalDate)
-    .single()
-
   const payload = {
     usuario_id: userId,
     fecha: clinicalDate,
@@ -147,19 +164,22 @@ export async function saveCheckin(formData: {
     omitido: false,
   }
 
-  let error
-  if (existing) {
-    // Update existing check-in
-    const result = await supabase
-      .from('checkins')
-      .update(payload)
-      .eq('id', existing.id)
-    error = result.error
-  } else {
-    // Insert new
-    const result = await supabase.from('checkins').insert(payload)
-    error = result.error
-  }
+  const { data: existing } = await supabase
+    .from('checkins')
+    .select('id')
+    .eq('usuario_id', userId)
+    .eq('fecha', clinicalDate)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  const { error } = existing
+    ? await supabase
+        .from('checkins')
+        .update(payload)
+        .eq('usuario_id', userId)
+        .eq('fecha', clinicalDate)
+    : await supabase.from('checkins').insert(payload)
 
   if (error) {
     console.error('Error saving checkin:', error)
@@ -172,43 +192,12 @@ export async function saveCheckin(formData: {
 
 // ─── Save session notes ──────────────────────────────────────────────────────
 export async function saveSessionNotes(notes: string) {
-  const supabase = await createClient()
   const userId = await getUserId()
 
-  // Check if there is already a pending session (upcoming) to update
-  const { data: existing } = await supabase
-    .from('sesiones')
-    .select('id')
-    .eq('usuario_id', userId)
-    .order('fecha_programada', { ascending: false })
-    .limit(1)
-    .single()
-
-  if (existing) {
-    // Update notes on the most recent session
-    const { error } = await supabase
-      .from('sesiones')
-      .update({ preguntas_para_llevar: notes })
-      .eq('id', existing.id)
-
-    if (error) {
-      console.error('Error updating session notes:', error)
-      return { error: 'No se pudieron guardar las notas.' }
-    }
-  } else {
-    // Create a new session entry with just the notes
-    const { error } = await supabase.from('sesiones').insert({
-      usuario_id: userId,
-      fecha_programada: new Date().toISOString(),
-      preguntas_para_llevar: notes,
-    })
-
-    if (error) {
-      console.error('Error creating session:', error)
-      return { error: 'No se pudieron guardar las notas.' }
-    }
-  }
+  const result = await saveClientSessionPrep(userId, notes)
+  if (result.error) return { error: 'No se pudieron guardar las notas.' }
 
   revalidatePath('/inicio')
+  revalidatePath('/regulacion')
   return { success: true }
 }

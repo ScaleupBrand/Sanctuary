@@ -4,6 +4,7 @@ import { useState, useRef } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
+import { toast } from 'sonner'
 import { updateNombre, updateAvatar } from '@/lib/actions/ajustes'
 
 export default function TuNombreClient({ initialData }: { initialData: { nombre: string, avatarUrl: string | null } }) {
@@ -29,7 +30,7 @@ export default function TuNombreClient({ initialData }: { initialData: { nombre:
     if (res.success && res.avatarUrl) {
       setAvatarUrl(res.avatarUrl)
     } else {
-      alert('Error subiendo el avatar: ' + res.error)
+      toast.error(res.error || 'Algo salió mal. Intentá de nuevo.')
     }
   }
 
@@ -49,10 +50,10 @@ export default function TuNombreClient({ initialData }: { initialData: { nombre:
           <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 0" }}>arrow_back</span>
         </Link>
         <div className="font-serif text-[#8E354A] dark:text-rose-300 antialiased font-medium">
-          3 of 4
+          3 de 4
         </div>
         <Link href="/onboarding/tu-horario" className="font-serif text-[#8E354A] dark:text-rose-300 antialiased font-medium hover:opacity-70 transition-opacity duration-300 active:scale-95">
-          Skip
+          Saltar
         </Link>
       </header>
 

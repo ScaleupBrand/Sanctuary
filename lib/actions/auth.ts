@@ -8,7 +8,7 @@ export async function login(formData: FormData) {
   const password = formData.get('password') as string
 
   if (!email || !password) {
-    return { error: 'Por favor, completa todos los campos.' }
+    redirect('/login?error=missing-fields')
   }
 
   const supabase = await createClient()
@@ -20,7 +20,7 @@ export async function login(formData: FormData) {
 
   if (error) {
     console.error('Login error:', error.message)
-    return { error: 'Credenciales inválidas.' }
+    redirect('/login?error=invalid-credentials')
   }
 
   redirect('/inicio')
@@ -32,7 +32,7 @@ export async function signup(formData: FormData) {
   const fullName = formData.get('fullName') as string
 
   if (!email || !password || !fullName) {
-    return { error: 'Por favor, completa todos los campos.' }
+    redirect('/registro?error=missing-fields')
   }
 
   const supabase = await createClient()
@@ -49,7 +49,7 @@ export async function signup(formData: FormData) {
 
   if (error) {
     console.error('Signup error:', error.message)
-    return { error: error.message }
+    redirect('/registro?error=signup-failed')
   }
 
   // Insert the profile in public.users with 'pendiente' status
@@ -63,7 +63,7 @@ export async function signup(formData: FormData) {
 
     if (profileError) {
       console.error('Profile creation error:', profileError)
-      return { error: 'Error al crear el perfil.' }
+      redirect('/registro?error=profile-failed')
     }
   }
 
@@ -75,11 +75,31 @@ export async function getUserProfile() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
 
-  const { data: profile } = await supabase
+  const { data: profile, error } = await supabase
     .from('users')
-    .select('estado')
+    .select('estado, avatar_url, nombre')
     .eq('id', user.id)
     .single()
+
+  if (error?.code === 'PGRST116') {
+    const fallbackName =
+      typeof user.user_metadata?.full_name === 'string' && user.user_metadata.full_name.trim()
+        ? user.user_metadata.full_name.trim()
+        : user.email?.split('@')[0] || 'Usuario'
+
+    const { data: createdProfile } = await supabase
+      .from('users')
+      .insert({
+        id: user.id,
+        email: user.email || '',
+        nombre: fallbackName,
+        estado: 'pendiente',
+      })
+      .select('estado, avatar_url, nombre')
+      .single()
+
+    return createdProfile
+  }
 
   return profile
 }

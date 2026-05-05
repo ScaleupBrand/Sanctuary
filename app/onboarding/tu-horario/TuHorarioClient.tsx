@@ -41,18 +41,18 @@ export default function TuHorarioClient() {
     <>
       {/* TopAppBar */}
       <header className="bg-[#FAF7F2] dark:bg-stone-950 docked full-width top-0 border-b-[0.5px] border-rose-100 dark:border-stone-800 flat no shadows fixed left-0 w-full z-50 flex justify-between items-center px-6 py-4 bg-opacity-90 backdrop-blur-md">
-        <Link href="/onboarding/tu-nombre" aria-label="Go back" className="hover:opacity-70 transition-opacity duration-300 active:scale-95 flex items-center focus:outline-none">
+        <Link href="/onboarding/tu-nombre" aria-label="Volver" className="hover:opacity-70 transition-opacity duration-300 active:scale-95 flex items-center focus:outline-none">
           <span className="material-symbols-outlined text-[#8E354A] dark:text-rose-400" style={{ fontVariationSettings: "'FILL' 0" }}>arrow_back</span>
         </Link>
         <span className="font-serif text-[#8E354A] dark:text-rose-200 antialiased font-medium">
-          4 of 4
+          4 de 4
         </span>
         <button 
           onClick={handleSkip}
           disabled={isSaving}
           className="text-[#8E354A] dark:text-rose-300 hover:opacity-70 transition-opacity duration-300 active:scale-95 font-serif font-medium focus:outline-none disabled:opacity-50"
         >
-          Skip
+          Saltar
         </button>
       </header>
 

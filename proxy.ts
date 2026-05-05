@@ -15,7 +15,7 @@ export async function updateSession(request: NextRequest) {
           return request.cookies.getAll()
         },
         setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) => request.cookies.set(name, value))
+          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
           supabaseResponse = NextResponse.next({
             request,
           })
@@ -33,7 +33,15 @@ export async function updateSession(request: NextRequest) {
 
   const pathname = request.nextUrl.pathname
   const isAuthRoute = pathname === '/login' || pathname === '/registro'
+  const isPasswordResetRoute = pathname === '/cambiar-password'
+  const isPublicRoute = pathname === '/' || isPasswordResetRoute
   const isOnboardingRoute = pathname.startsWith('/onboarding')
+  const isTherapistRoute = pathname.startsWith('/terapeuta')
+  const protectedAppRoutes = ['/inicio', '/brote', '/historial', '/regulacion', '/ajustes']
+  const isAppRoute = protectedAppRoutes.some(
+    (route) => pathname === route || pathname.startsWith(`${route}/`)
+  )
+  const isProtectedRoute = isAppRoute || isOnboardingRoute || isTherapistRoute
 
   // Helper function to redirect while preserving cookies from supabaseResponse
   const redirectWithCookies = (path: string) => {
@@ -47,46 +55,86 @@ export async function updateSession(request: NextRequest) {
     return response
   }
 
-  // If user is not logged in and trying to access an app route, redirect to login
-  if (!user && !isAuthRoute && pathname !== '/') {
+  // Protected app and onboarding routes require a live Supabase session.
+  if (!user && isProtectedRoute) {
+    return redirectWithCookies('/login')
+  }
+
+  if (!user && !isAuthRoute && !isPublicRoute) {
     return redirectWithCookies('/login')
   }
 
   if (user) {
     const { data: profile } = await supabase
       .from('users')
-      .select('estado, onboarding_completado')
+      .select('estado, onboarding_completado, rol')
       .eq('id', user.id)
       .single()
 
     if (profile) {
-      if (profile.estado === 'pendiente') {
-        // Pending users must see the lock screen (which is on /inicio or any app route)
-        if (isOnboardingRoute || isAuthRoute) {
+      const canAccessTherapistPortal = profile.rol === 'terapeuta' || profile.rol === 'admin'
+
+      if (isPasswordResetRoute) {
+        return supabaseResponse
+      }
+
+      if (isTherapistRoute) {
+        if (!canAccessTherapistPortal) {
           return redirectWithCookies('/inicio')
         }
-      } else if (profile.estado === 'activo') {
+
+        return supabaseResponse
+      }
+
+      if (isAuthRoute) {
+        if (profile.estado !== 'activo') {
+          return redirectWithCookies('/inicio')
+        }
+
+        if (canAccessTherapistPortal) {
+          return redirectWithCookies('/terapeuta/dashboard')
+        }
+
+        if (!profile.onboarding_completado) {
+          return redirectWithCookies('/onboarding/bienvenida')
+        }
+
+        return redirectWithCookies('/inicio')
+      }
+
+      if (profile.estado !== 'activo') {
+        // Pending users must see the lock screen (which is on /inicio or any app route)
+        if (isOnboardingRoute) {
+          return redirectWithCookies('/inicio')
+        }
+
+        if (isAppRoute && pathname !== '/inicio') {
+          return redirectWithCookies('/inicio')
+        }
+      } else {
         if (!profile.onboarding_completado) {
           // Active but onboarding not finished
-          if (!isOnboardingRoute && !isAuthRoute) {
+          if (!isOnboardingRoute) {
             return redirectWithCookies('/onboarding/bienvenida')
           }
         } else {
           // Active and onboarding finished
-          if (isOnboardingRoute || isAuthRoute) {
+          if (isOnboardingRoute) {
             return redirectWithCookies('/inicio')
           }
         }
       }
-    } else if (isAuthRoute) {
-      return redirectWithCookies('/inicio')
+    } else {
+      if (isProtectedRoute && pathname !== '/inicio') {
+        return redirectWithCookies('/inicio')
+      }
     }
   }
 
   return supabaseResponse
 }
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   return await updateSession(request)
 }
 
@@ -95,4 +143,3 @@ export const config = {
     '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 }
-

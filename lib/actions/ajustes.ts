@@ -10,29 +10,43 @@ async function getUserId() {
   return user.id
 }
 
-export async function getAjustesData() {
+async function getAuthenticatedUser() {
   const supabase = await createClient()
-  const userId = await getUserId()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Not authenticated')
+  return { supabase, user }
+}
 
-  let { data: userProfile, error: profileError } = await supabase
+export async function getAjustesData() {
+  const { supabase, user } = await getAuthenticatedUser()
+  const userId = user.id
+
+  const profileResult = await supabase
     .from('users')
     .select('nombre, avatar_url, notificaciones_activas')
     .eq('id', userId)
     .single()
+  let userProfile = profileResult.data
+  const profileFetchError = profileResult.error
 
-  if (profileError) {
-    if (profileError.code === 'PGRST116') {
+  if (profileFetchError) {
+    if (profileFetchError.code === 'PGRST116') {
       // Create default profile if missing
       await supabase.from('users').insert({
         id: userId,
+        email: user.email || '',
         nombre: 'Usuario',
         estado: 'pendiente'
       })
       userProfile = { nombre: 'Usuario', avatar_url: null, notificaciones_activas: true }
     } else {
-      console.error('profileError:', profileError.code, profileError.message, profileError.details)
-      throw new Error(`Error fetching profile: ${profileError.message}`)
+      console.error('profileError:', profileFetchError.code, profileFetchError.message, profileFetchError.details)
+      throw new Error(`Error fetching profile: ${profileFetchError.message}`)
     }
+  }
+
+  if (!userProfile) {
+    throw new Error('Error fetching profile')
   }
 
   const { data: clinicoData, error: clinicoError } = await supabase

@@ -2,7 +2,19 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { login } from '@/lib/actions/auth'
 
-export default function LoginPage() {
+const loginErrors: Record<string, string> = {
+  'missing-fields': 'Completá tu correo y contraseña para entrar.',
+  'invalid-credentials': 'No pudimos iniciar sesión con esos datos.',
+}
+
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string }>
+}) {
+  const params = await searchParams
+  const errorMessage = params.error ? loginErrors[params.error] : null
+
   return (
     <main className="min-h-screen flex flex-col md:flex-row w-full bg-background text-on-background selection:bg-primary-fixed selection:text-on-primary-fixed">
       {/* Left: Atmospheric Image (Desktop Only) */}
@@ -23,7 +35,7 @@ export default function LoginPage() {
           {/* Header Group */}
           <div className="flex flex-col mb-section-gap text-left">
             <span className="text-[12px] font-semibold tracking-[0.1em] text-outline uppercase mb-stack-sm block">
-              Volver a Ti
+              Sanctuary
             </span>
             <h1 className="font-serif text-[32px] leading-[40px] tracking-[-0.01em] text-on-surface mb-stack-sm">
               Inicia sesión
@@ -35,6 +47,12 @@ export default function LoginPage() {
           
           {/* Form */}
           <form action={login} className="flex flex-col gap-stack-lg w-full">
+            {errorMessage && (
+              <p className="rounded-lg border-[0.5px] border-outline-variant bg-surface-container-low px-4 py-3 text-[15px] leading-[22px] text-primary">
+                {errorMessage}
+              </p>
+            )}
+
             {/* Input: Email */}
             <div className="flex flex-col gap-stack-sm group">
               <label className="text-[12px] font-semibold tracking-[0.1em] uppercase text-on-surface-variant group-focus-within:text-primary transition-colors" htmlFor="email">

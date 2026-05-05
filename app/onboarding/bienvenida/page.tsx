@@ -23,10 +23,10 @@ export default async function BienvenidaPage() {
           <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 0" }}>arrow_back</span>
         </div>
         <span className="font-button-text text-button-text text-primary font-medium tracking-wide">
-          1 of 4
+          1 de 4
         </span>
         <Link href="/onboarding/como-funciona" className="font-button-text text-button-text text-primary hover:opacity-70 transition-opacity duration-300 active:scale-95 px-2 py-2">
-          Skip
+          Saltar
         </Link>
       </header>
 

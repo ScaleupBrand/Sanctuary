@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { createPortal } from 'react-dom'
 
 interface NavigationModalProps {
@@ -11,12 +11,6 @@ interface NavigationModalProps {
 }
 
 export function NavigationModal({ isOpen, onClose, onSkip, isSkipping }: NavigationModalProps) {
-  const [mounted, setMounted] = useState(false)
-
-  useEffect(() => {
-    setMounted(true)
-  }, [])
-
   // Prevent body scroll when modal is open
   useEffect(() => {
     if (isOpen) {
@@ -29,7 +23,7 @@ export function NavigationModal({ isOpen, onClose, onSkip, isSkipping }: Navigat
     }
   }, [isOpen])
 
-  if (!mounted || !isOpen) return null
+  if (typeof document === 'undefined' || !isOpen) return null
 
   const modalContent = (
     <div

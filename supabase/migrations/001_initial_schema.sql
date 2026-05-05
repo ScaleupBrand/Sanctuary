@@ -62,7 +62,7 @@ create table public.brotes (
 create table public.herramientas (
   id uuid default uuid_generate_v4() primary key,
   nombre text not null,
-  tipo text check (tipo in ('audio', 'practica', 'checklist', 'protocolo')),
+  tipo text check (tipo in ('audio', 'practica', 'checklist', 'protocolo', 'video')),
   duracion integer,
   fase_metodo integer check (fase_metodo between 1 and 4),
   archivo_url text,

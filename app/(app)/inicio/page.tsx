@@ -1,17 +1,24 @@
 'use client'
 
 import { useState } from 'react'
-import Image from 'next/image'
 import { createPortal } from 'react-dom'
+import { toast } from 'sonner'
 import { saveCheckin, saveSessionNotes } from '@/lib/actions/checkin-status'
 import { useCheckin, type WeeklyDay } from '@/components/providers/CheckinProvider'
 
 // ─── Energy color for weekly dots ────────────────────────────────────────────
 const energyColor = (d: WeeklyDay) => {
-  if (!d.registered) return 'bg-[#877274]/20' // gray — not registered
-  if (d.energia >= 4) return 'bg-emerald-500'  // green
-  if (d.energia >= 2) return 'bg-amber-400'     // amber
-  return 'bg-rose-500'                           // red
+  if (!d.registered || !d.energia) return 'border-[#cfc8c5] bg-[#e8e4e0]'
+  if (d.energia >= 4) return 'border-[#8bc99a] bg-[#dff4e3]'
+  if (d.energia >= 2) return 'border-[#f2c84b] bg-[#fff4ca]'
+  return 'border-[#f0a39d] bg-[#ffe0dd]'
+}
+
+const currentDayMarkerColor = (d: WeeklyDay) => {
+  if (!d.registered || !d.energia) return 'bg-[#5f5754]'
+  if (d.energia >= 4) return 'bg-[#4f9d61]'
+  if (d.energia >= 2) return 'bg-[#c79718]'
+  return 'bg-[#d05f56]'
 }
 
 // ─── Energy label for summary card ───────────────────────────────────────────
@@ -22,6 +29,88 @@ const energyLabel = (val: number | null | undefined) => {
   if (val <= 3) return 'con energía estable'
   if (val <= 4) return 'con buena energía'
   return 'radiante'
+}
+
+const greetingName = (name: string | null) => {
+  if (!name?.trim()) return ''
+  return `, ${name.trim().split(' ')[0]}`
+}
+
+const weeklyEnergyLabel = (history: WeeklyDay[]) => {
+  const values = history
+    .filter((d) => d.registered && typeof d.energia === 'number')
+    .map((d) => d.energia as number)
+
+  if (values.length === 0) return 'Sin registro'
+
+  const avg = values.reduce((sum, value) => sum + value, 0) / values.length
+
+  if (avg >= 3) return 'Estable'
+  if (avg >= 2) return 'Baja'
+  return 'Muy baja'
+}
+
+const formatUpcomingSessionDate = (value: string) =>
+  new Date(value).toLocaleDateString('es-ES', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+
+const isWithinNextThreeDays = (value: string) => {
+  const sessionTime = new Date(value).getTime()
+  const now = Date.now()
+  const threeDays = 1000 * 60 * 60 * 24 * 3
+
+  return sessionTime >= now && sessionTime <= now + threeDays
+}
+
+function WeeklySummaryCard({
+  weeklyHistory,
+  clinicalDate,
+}: {
+  weeklyHistory: WeeklyDay[]
+  clinicalDate: string | null
+}) {
+  const registeredDays = weeklyHistory.filter((d) => d.registered).length
+  const flareDays = weeklyHistory.filter((d) => d.huboBrote).length
+  const energy = weeklyEnergyLabel(weeklyHistory)
+
+  return (
+    <section className="mb-section-gap">
+      <p className="mb-stack-sm text-[12px] font-semibold tracking-[0.14em] uppercase text-outline">
+        Tu semana
+      </p>
+      <div className="rounded-xl border-[0.5px] border-outline-variant bg-surface-container-lowest p-6 shadow-[0_8px_24px_rgba(142,53,74,0.04)]">
+        <div className="grid grid-cols-7 gap-2">
+          {weeklyHistory.map((d) => (
+            <div key={d.fecha} className="flex flex-col items-center gap-3">
+              <span className="text-[12px] font-semibold tracking-[0.12em] uppercase text-outline">
+                {d.dayLabel.slice(0, 1)}
+              </span>
+              <span
+                className={`relative size-8 rounded-full border-2 ${energyColor(d)}`}
+                title={d.registered ? `Energía: ${d.energia}` : 'No registrado'}
+              >
+                {d.fecha === clinicalDate && (
+                  <span className={`absolute left-1/2 top-1/2 size-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full ${currentDayMarkerColor(d)}`} />
+                )}
+              </span>
+            </div>
+          ))}
+        </div>
+        <div className="my-5 h-[0.5px] bg-outline-variant/60" />
+        <div className="flex items-start gap-3">
+          <span className="material-symbols-outlined mt-0.5 text-[22px] text-[#8e354a]">insights</span>
+          <p className="text-[18px] leading-[28px] text-on-surface-variant">
+            {registeredDays} días registrados · {flareDays} brotes · Energía: {energy}
+          </p>
+        </div>
+      </div>
+    </section>
+  )
 }
 
 // ─── Session Notes Modal ─────────────────────────────────────────────────────
@@ -38,12 +127,15 @@ function SessionNotesModal({ isOpen, onClose }: { isOpen: boolean; onClose: () =
     const res = await saveSessionNotes(notes)
     setSaving(false)
     if (res.success) {
+      toast.success('Cambios guardados')
       setSaved(true)
       setTimeout(() => {
         setSaved(false)
         setNotes('')
         onClose()
       }, 1200)
+    } else {
+      toast.error('Algo salió mal. Intentá de nuevo.')
     }
   }
 
@@ -101,8 +193,9 @@ function SessionNotesModal({ isOpen, onClose }: { isOpen: boolean; onClose: () =
 
 // ─── Home Dashboard (post check-in) ─────────────────────────────────────────
 function HomeDashboard() {
-  const { requestNavigation, todayCheckin, weeklyHistory, setPending, setTodayCheckin } = useCheckin()
+  const { requestNavigation, clinicalDate, todayCheckin, weeklyHistory, userName, upcomingSession, setPending } = useCheckin()
   const [sessionModalOpen, setSessionModalOpen] = useState(false)
+  const shouldPrepareSession = Boolean(upcomingSession && isWithinNextThreeDays(upcomingSession.fecha_hora))
 
   const handleEdit = () => {
     // Go back to check-in form with existing data
@@ -134,43 +227,52 @@ function HomeDashboard() {
         {/* Greeting */}
         <section className="mb-stack-lg">
           <h1 className="font-serif text-[40px] leading-[48px] tracking-[-0.02em] text-on-background">
-            Buen día, Elena.
+            Buen día{greetingName(userName)}.
           </h1>
         </section>
 
-        {/* Weekly mini-summary */}
-        <section className="mb-stack-lg flex items-end gap-2">
-          {weeklyHistory.map((d, i) => (
-            <div key={i} className="flex flex-col items-center gap-1.5 flex-1">
-              <div
-                className={`w-3 h-3 rounded-full transition-all ${energyColor(d)}`}
-                title={d.registered ? `Energía: ${d.energia}` : d.omitido ? 'Omitido' : 'No registrado'}
-              />
-              <span className="text-[11px] font-semibold tracking-widest uppercase text-outline">{d.day}</span>
-            </div>
-          ))}
+        {/* Daily summary */}
+        <section className="mb-stack-lg">
+          <p className="font-serif text-[24px] leading-[32px] tracking-[-0.01em] text-on-background max-w-lg">
+            Hoy te sientes {energyLabel(todayCheckin?.energia)}. Sigue escuchando a tu cuerpo.
+          </p>
         </section>
 
-        {/* Summary Card with landscape image */}
-        <section className="mb-section-gap">
-          <div className="relative overflow-hidden rounded-xl border-[0.5px] border-[#dac0c3] bg-[#ffffff] shadow-[0_4px_24px_rgba(142,53,74,0.03)]">
-            <div className="absolute inset-0 z-0">
-              <Image
-                src="/santuario_landscape.png"
-                alt="Paisaje sereno al amanecer"
-                fill
-                className="object-cover opacity-60 blur-[2px]"
-                priority
-              />
-              <div className="absolute inset-0 bg-gradient-to-r from-white/90 to-white/40" />
+        <WeeklySummaryCard weeklyHistory={weeklyHistory} clinicalDate={clinicalDate} />
+
+        {upcomingSession && (
+          <section className="mb-section-gap rounded-xl border-[0.5px] border-outline-variant bg-surface-container-lowest p-6 shadow-[0_8px_24px_rgba(142,53,74,0.04)]">
+            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+              <div className="flex items-start gap-4">
+                <div className={`flex size-11 shrink-0 items-center justify-center rounded-full ${shouldPrepareSession ? 'bg-primary text-on-primary' : 'bg-primary-fixed text-primary'}`}>
+                  <span className="material-symbols-outlined">event</span>
+                </div>
+                <div>
+                  <p className="text-[12px] font-semibold uppercase tracking-[0.1em] text-outline">Próxima sesión</p>
+                  <h2 className="mt-1 font-serif text-[24px] leading-[32px] tracking-[-0.01em] text-on-background">
+                    {formatUpcomingSessionDate(upcomingSession.fecha_hora)}
+                  </h2>
+                  {shouldPrepareSession && (
+                    <p className="mt-1 text-[15px] leading-[22px] text-on-surface-variant">
+                      Ya podés preparar lo que querés llevar a sesión.
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {shouldPrepareSession && (
+                <button
+                  type="button"
+                  onClick={() => setSessionModalOpen(true)}
+                  className="inline-flex items-center justify-center gap-2 rounded-full bg-primary px-5 py-3 text-sm font-semibold text-on-primary transition-colors hover:bg-surface-tint"
+                >
+                  Preparar mi sesión
+                  <span className="material-symbols-outlined text-[18px]">edit</span>
+                </button>
+              )}
             </div>
-            <div className="relative z-10 p-6 md:p-8">
-              <p className="font-serif text-[24px] leading-[32px] tracking-[-0.01em] text-on-background max-w-lg">
-                Hoy te sientes {energyLabel(todayCheckin?.energia)}. Sigue escuchando a tu cuerpo.
-              </p>
-            </div>
-          </div>
-        </section>
+          </section>
+        )}
 
         {/* Bento Grid — Actions */}
         <section className="grid grid-cols-1 md:grid-cols-2 gap-stack-md md:gap-stack-lg">
@@ -210,7 +312,9 @@ function HomeDashboard() {
           <button
             type="button"
             onClick={() => setSessionModalOpen(true)}
-            className="group text-left md:col-span-2 rounded-xl p-6 bg-[#f0dee0] border-[0.5px] border-outline-variant shadow-[0_4px_24px_rgba(142,53,74,0.03)] hover:bg-surface-variant transition-colors touch-manipulation"
+            className={`group text-left md:col-span-2 rounded-xl p-6 border-[0.5px] border-outline-variant shadow-[0_4px_24px_rgba(142,53,74,0.03)] transition-colors touch-manipulation ${
+              shouldPrepareSession ? 'bg-primary text-on-primary hover:bg-surface-tint' : 'bg-[#f0dee0] hover:bg-surface-variant'
+            }`}
           >
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div className="flex items-center gap-4">
@@ -218,12 +322,18 @@ function HomeDashboard() {
                   <span className="material-symbols-outlined text-[#701e34]">calendar_today</span>
                 </div>
                 <div>
-                  <h3 className="font-serif text-[24px] leading-[32px] tracking-[-0.01em] text-on-background">Preparación para Sesión</h3>
-                  <p className="text-[16px] leading-[24px] text-on-surface-variant">Notas y temas para tu próxima terapia.</p>
+                  <h3 className={`font-serif text-[24px] leading-[32px] tracking-[-0.01em] ${shouldPrepareSession ? 'text-on-primary' : 'text-on-background'}`}>Preparación para Sesión</h3>
+                  <p className={`text-[16px] leading-[24px] ${shouldPrepareSession ? 'text-primary-fixed-dim' : 'text-on-surface-variant'}`}>
+                    {upcomingSession
+                      ? `Próxima sesión: ${formatUpcomingSessionDate(upcomingSession.fecha_hora)}`
+                      : 'Notas y temas para tu próxima terapia.'}
+                  </p>
                 </div>
               </div>
-              <span className="text-[15px] font-medium px-4 py-2 rounded-full bg-[#8e354a] text-white flex items-center gap-2 w-fit">
-                Escribir
+              <span className={`text-[15px] font-medium px-4 py-2 rounded-full flex items-center gap-2 w-fit ${
+                shouldPrepareSession ? 'bg-on-primary text-primary' : 'bg-[#8e354a] text-white'
+              }`}>
+                {shouldPrepareSession ? 'Preparar mi sesión' : 'Escribir'}
                 <span className="material-symbols-outlined text-[18px]">edit</span>
               </span>
             </div>
@@ -238,7 +348,7 @@ function HomeDashboard() {
 
 // ─── Main Page Component ─────────────────────────────────────────────────────
 export default function InicioPage() {
-  const { isPending, setPending, todayCheckin, setTodayCheckin } = useCheckin()
+  const { isPending, clinicalDate, userName, setPending, todayCheckin, setTodayCheckin, setWeeklyHistory } = useCheckin()
 
   // Initialize form with existing data if editing, else defaults
   const [energia, setEnergia] = useState<number>(todayCheckin?.energia ?? 3)
@@ -261,8 +371,9 @@ export default function InicioPage() {
     })
 
     if (result?.error) {
-      alert(result.error)
+      toast.error('Algo salió mal. Intentá de nuevo.')
     } else {
+      toast.success('Tu registro de hoy está guardado')
       // Update local state so dashboard shows correct data immediately
       setTodayCheckin({
         energia,
@@ -273,6 +384,21 @@ export default function InicioPage() {
         nota_libre: nota,
         omitido: false,
       })
+      if (clinicalDate) {
+        setWeeklyHistory((current) =>
+          current.map((day) =>
+            day.fecha === clinicalDate
+              ? {
+                  ...day,
+                  energia,
+                  dolor,
+                  huboBrote,
+                  registered: true,
+                }
+              : day
+          )
+        )
+      }
       setPending(false)
     }
     setLoading(false)
@@ -287,7 +413,7 @@ export default function InicioPage() {
       {/* Greeting */}
       <section className="mb-section-gap">
         <h1 className="font-serif text-[40px] leading-[48px] tracking-[-0.02em] text-on-background mb-stack-sm">
-          Buen día, Elena.
+          Buen día{greetingName(userName)}.
         </h1>
         <p className="text-[18px] leading-[28px] text-on-surface-variant max-w-lg">
           Tómate un momento para registrar cómo te sientes hoy en tu santuario.

@@ -3,7 +3,7 @@ import { CheckinProvider } from '@/components/providers/CheckinProvider'
 import { PageTransition } from '@/components/providers/PageTransition'
 import { MobileNav } from '@/components/ui/MobileNav'
 import { getCheckinStatus } from '@/lib/actions/checkin-status'
-import { getUserProfile } from '@/lib/actions/auth'
+import { getUserProfile, logout } from '@/lib/actions/auth'
 import { getWeeklyChartData } from '@/lib/actions/historial'
 import { getUpcomingClientSession } from '@/lib/actions/agenda'
 import { TopAppBar } from '@/components/ui/TopAppBar'
@@ -67,6 +67,14 @@ export default async function AppLayout({ children }: { children: React.ReactNod
                   Tu acceso está pendiente. Almudena te avisará cuando esté listo.
                 </p>
               )}
+              <form action={logout} className="mt-4 w-full">
+                <button
+                  type="submit"
+                  className="w-full rounded-full border-[0.5px] border-outline-variant bg-transparent py-3 text-[14px] font-medium text-primary transition-colors hover:bg-surface-container-low pointer-events-auto"
+                >
+                  Cerrar sesión
+                </button>
+              </form>
             </div>
           </div>
         )}
